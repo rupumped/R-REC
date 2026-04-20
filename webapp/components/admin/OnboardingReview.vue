@@ -1,0 +1,197 @@
+<template>
+  <div class="space-y-4">
+    <!-- Filter -->
+    <div class="flex gap-2">
+      <button
+        v-for="f in filters"
+        :key="f.value"
+        class="px-3 py-1 rounded text-sm border transition-colors"
+        :class="activeFilter === f.value
+          ? 'bg-brand border-brand text-white'
+          : 'border-border text-text-secondary hover:text-text-primary'"
+        @click="activeFilter = f.value"
+      >
+        {{ f.label }}
+        <span class="ml-1 font-mono text-2xs">{{ countByStatus(f.value) }}</span>
+      </button>
+    </div>
+
+    <div v-if="filtered.length === 0" class="card card-body text-center text-text-muted text-sm py-10">
+      No submissions with status: {{ activeFilter }}
+    </div>
+
+    <div v-for="sub in filtered" :key="sub.id" class="card">
+      <div class="card-header">
+        <div>
+          <span class="font-mono text-sm text-text-secondary">#{{ sub.id }}</span>
+          <span class="ml-3 font-medium text-text-primary">{{ sub.projectName ?? '(unnamed project)' }}</span>
+          <span :class="`badge badge-${sub.status} ml-3`">{{ sub.status }}</span>
+        </div>
+        <span class="text-sm text-text-muted">{{ formatDate(sub.createdAt) }}</span>
+      </div>
+      <div class="card-body space-y-4">
+
+        <!-- Project info -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">Project type</p>
+            <p>{{ sub.projectType ?? '—' }}</p>
+          </div>
+          <div>
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">Expected annual gen.</p>
+            <p>{{ sub.expectedAnnualGeneration != null ? `${sub.expectedAnnualGeneration} MWh` : '—' }}</p>
+          </div>
+        </div>
+
+        <!-- Section summaries -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <!-- Generation type -->
+          <div v-if="sub.genGenerationType || sub.genDocUrl">
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">Generation type</p>
+            <p>{{ sub.genGenerationType ?? '—' }}</p>
+            <template v-if="sub.genSecondarySrc">
+              <p class="text-2xs text-text-muted mt-1">
+                Secondary: {{ sub.genSecondarySrc }}
+                <template v-if="sub.genSecondaryDesc"> — {{ sub.genSecondaryDesc }}</template>
+              </p>
+            </template>
+            <template v-if="sub.genTertiarySrc">
+              <p class="text-2xs text-text-muted">
+                Tertiary: {{ sub.genTertiarySrc }}
+                <template v-if="sub.genTertiaryDesc"> — {{ sub.genTertiaryDesc }}</template>
+              </p>
+            </template>
+            <a v-if="sub.genDocUrl" :href="viewUrl(sub.genDocUrl)" target="_blank" class="text-brand text-xs hover:underline">
+              {{ sub.genDocType ?? 'View document' }} ↗
+            </a>
+          </div>
+
+          <!-- Capacity -->
+          <div v-if="sub.capCapacity != null || sub.capDocUrl">
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">Capacity</p>
+            <p>{{ sub.capCapacity != null ? `${sub.capCapacity} kWp` : '—' }}</p>
+            <a v-if="sub.capDocUrl" :href="viewUrl(sub.capDocUrl)" target="_blank" class="text-brand text-xs hover:underline">
+              {{ sub.capDocType ?? 'View document' }} ↗
+            </a>
+          </div>
+
+          <!-- Location -->
+          <div v-if="sub.locLat != null || sub.locPhysicalAddress || sub.locDocUrl">
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">Location</p>
+            <p v-if="sub.locPhysicalAddress">{{ sub.locPhysicalAddress }}</p>
+            <p v-if="sub.locLat != null" class="font-mono text-2xs text-text-muted">{{ sub.locLat }}, {{ sub.locLon }}</p>
+            <a v-if="sub.locDocUrl" :href="viewUrl(sub.locDocUrl)" target="_blank" class="text-brand text-xs hover:underline">
+              {{ sub.locDocType ?? 'View document' }} ↗
+            </a>
+          </div>
+
+          <!-- First operation -->
+          <div v-if="sub.dateDateOfFirstOperation || sub.dateDocUrl">
+            <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted mb-1">First operation</p>
+            <p>{{ sub.dateDateOfFirstOperation ?? '—' }}</p>
+            <a v-if="sub.dateDocUrl" :href="viewUrl(sub.dateDocUrl)" target="_blank" class="text-brand text-xs hover:underline">
+              {{ sub.dateDocType ?? 'View document' }} ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Equipment photos -->
+        <div v-if="sub.photosGen?.length" class="space-y-1">
+          <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted">Equipment photos</p>
+          <div class="flex gap-2 flex-wrap">
+            <a v-for="(p, i) in sub.photosGen" :key="i" :href="viewUrl(p.url)" target="_blank">
+              <img :src="viewUrl(p.url)" class="h-16 w-16 object-cover rounded border border-border" :alt="p.caption" />
+            </a>
+          </div>
+        </div>
+
+        <!-- Metering photos -->
+        <div v-if="sub.photosMeter?.length" class="space-y-1">
+          <p class="text-2xs font-semibold uppercase tracking-wider text-text-muted">Metering photos</p>
+          <div class="flex gap-2 flex-wrap">
+            <a v-for="(p, i) in sub.photosMeter" :key="i" :href="viewUrl(p.url)" target="_blank">
+              <img :src="viewUrl(p.url)" class="h-16 w-16 object-cover rounded border border-border" :alt="p.caption" />
+            </a>
+          </div>
+        </div>
+
+        <!-- Review action (pending only) -->
+        <template v-if="sub.status === 'pending'">
+          <div>
+            <label :for="`review-notes-${sub.id}`" class="block text-xs font-medium text-text-secondary mb-1">Review notes</label>
+            <textarea
+              :id="`review-notes-${sub.id}`"
+              v-model="reviewNotes[sub.id]"
+              rows="2"
+              class="rex-input w-full"
+              placeholder="Add notes for the generator…"
+            />
+          </div>
+          <div class="flex gap-2">
+            <button
+              class="rounded bg-success px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              @click="review(sub.id, 'approved')"
+            >
+              Approve
+            </button>
+            <button
+              class="rounded bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              @click="review(sub.id, 'rejected')"
+            >
+              Reject
+            </button>
+          </div>
+        </template>
+
+        <div v-else-if="sub.reviewNotes" class="text-sm text-text-secondary border-t border-border pt-3">
+          <span class="font-medium">Review notes:</span> {{ sub.reviewNotes }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { OnboardingSubmission } from '~/server/db/schema'
+
+const props = defineProps<{ submissions: OnboardingSubmission[] }>()
+const emit  = defineEmits<{ refresh: [] }>()
+
+const activeFilter = ref<string>('pending')
+const reviewNotes  = reactive<Record<number, string>>({})
+
+const filters = [
+  { label: 'Pending',  value: 'pending' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' },
+  { label: 'All',      value: '' },
+]
+
+const filtered = computed(() =>
+  activeFilter.value
+    ? props.submissions.filter(s => s.status === activeFilter.value)
+    : props.submissions,
+)
+
+function countByStatus(status: string): number {
+  return status
+    ? props.submissions.filter(s => s.status === status).length
+    : props.submissions.length
+}
+
+async function review(id: number, status: 'approved' | 'rejected') {
+  await $fetch(`/api/onboarding/${id}`, {
+    method: 'PATCH',
+    body: { status, reviewNotes: reviewNotes[id] ?? '' },
+  })
+  emit('refresh')
+}
+
+function viewUrl(url: string) {
+  return `/api/uploads/view?url=${encodeURIComponent(url)}`
+}
+
+function formatDate(d: Date | string) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+</script>
