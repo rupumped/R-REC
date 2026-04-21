@@ -41,8 +41,8 @@ export default defineNuxtConfig({
     r2UploadUrl: process.env.R2_UPLOAD_URL,
     // Public (exposed to client)
     public: {
-      companiesUrl:  process.env.NUXT_PUBLIC_COMPANIES_URL ?? 'https://raw.githubusercontent.com/Renewvia-Energy/Renewvia-REC/refs/heads/main/web/js/companies.json',
-      contractsUrl:  process.env.NUXT_PUBLIC_CONTRACTS_URL ?? 'https://raw.githubusercontent.com/Renewvia-Energy/Renewvia-REC/refs/heads/main/web/js/contracts.json',
+      companiesUrl:  process.env.NUXT_PUBLIC_COMPANIES_URL,
+      contractsUrl:  process.env.NUXT_PUBLIC_CONTRACTS_URL,
       r2PublicUrl:   process.env.R2_PUBLIC_URL ?? '',
       polygonscanBase: 'https://polygonscan.com',
       returnWallet:  process.env.RETURN_WALLET ?? '0x6e61b86d97ebe007e09770e6c76271645201fd07',
