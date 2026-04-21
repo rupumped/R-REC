@@ -157,7 +157,7 @@ export const useGenerationStore = defineStore('generation', () => {
     // Collect all verification_data URLs for mint transactions to this wallet
     const mintUrls: string[] = []
     for (const contract of contractsStore.contractsRaw) {
-      for (const trans of contract.transactions) {
+      for (const trans of contract.transactions ?? []) {
         if (
           !trans.ignore &&
           trans.action === 'mint' &&

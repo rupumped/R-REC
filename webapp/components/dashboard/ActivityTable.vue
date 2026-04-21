@@ -12,8 +12,6 @@
             <th>Action</th>
             <th>Asset</th>
             <th class="text-right">Amount (MWh)</th>
-            <th>From</th>
-            <th>To</th>
             <th>Tx</th>
           </tr>
         </thead>
@@ -33,8 +31,6 @@
             <td class="numeric" :class="item.signedAmount > 0 ? 'text-success' : 'text-danger'">
               {{ item.signedAmount > 0 ? '+' : '' }}{{ item.amount.toLocaleString() }}
             </td>
-            <td class="font-mono text-2xs text-text-muted">{{ abbrevAddr(item.from) }}</td>
-            <td class="font-mono text-2xs text-text-muted">{{ abbrevAddr(item.to) }}</td>
             <td>
               <a
                 v-if="item.hash"

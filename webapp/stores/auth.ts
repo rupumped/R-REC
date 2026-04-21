@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { useContractsStore } from './contracts'
+import { useGenerationStore } from './generation'
 
 export interface SessionUser {
   id: number
@@ -35,6 +37,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     await $fetch('/api/auth/logout', { method: 'POST' })
     await clear()
+    useContractsStore().reset()
+    useGenerationStore().reset()
+    clearNuxtData()
     await navigateTo('/login')
   }
 

@@ -36,7 +36,11 @@
           <select v-model="form.companyWallet" class="rex-select w-full">
             <option value="">— No company link —</option>
             <option
-              v-for="c in companies"
+              v-for="c in companies.toSorted((a, b) => {
+                if (a.name < b.name) return -1;
+                if (a.name > b.name) return 1;
+                return 0;
+              })"
               :key="c.address"
               :value="c.address.toLowerCase()"
             >

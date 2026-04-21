@@ -116,7 +116,7 @@ onMounted(() => {
   observer = new MutationObserver(() => { if (chart) buildChart() })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 })
-watch(() => props.slices, () => buildChart(), { deep: true })
+watch(() => props.slices, async () => { await nextTick(); buildChart() }, { deep: true })
 onUnmounted(() => {
   chart?.destroy()
   observer?.disconnect()

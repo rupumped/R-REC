@@ -167,11 +167,11 @@ export const useContractsStore = defineStore('contracts', () => {
     error.value = null
     try {
       const [companiesData, contractsData] = await Promise.all([
-        $fetch<CompanyRecord[]>(config.public.companiesUrl),
-        $fetch<ContractRecord[]>(config.public.contractsUrl),
+        $fetch<CompanyRecord[]>(config.public.companiesUrl, { parseResponse: JSON.parse }),
+        $fetch<ContractRecord[]>(config.public.contractsUrl, { parseResponse: JSON.parse }),
       ])
-      companies.value = companiesData
-      contractsRaw.value = contractsData
+      companies.value    = Array.isArray(companiesData) ? companiesData : []
+      contractsRaw.value = Array.isArray(contractsData) ? contractsData : []
       loaded.value = true
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to load market data'
@@ -193,7 +193,7 @@ export const useContractsStore = defineStore('contracts', () => {
     const newActivity: ActivityItem[] = []
 
     for (const contract of contractsRaw.value) {
-      for (const trans of contract.transactions) {
+      for (const trans of contract.transactions ?? []) {
         // Skip explicitly ignored transactions
         if (trans.ignore) continue
 
