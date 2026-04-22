@@ -17,6 +17,14 @@
       @cancel="showCreate = false"
     />
 
+    <AdminEditUser
+      v-if="editingUser"
+      :user="editingUser"
+      :companies="companies"
+      @saved="onSaved"
+      @cancel="editingUser = null"
+    />
+
     <div class="card">
       <div class="card-body p-0">
         <table class="data-table">
@@ -27,11 +35,12 @@
               <th>Roles</th>
               <th>Company wallet</th>
               <th>Created</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="users.length === 0">
-              <td colspan="5" class="text-center text-text-muted py-8">No users found</td>
+              <td colspan="6" class="text-center text-text-muted py-8">No users found</td>
             </tr>
             <tr v-for="u in users" :key="u.id">
               <td class="font-medium">{{ u.username }}</td>
@@ -48,6 +57,14 @@
                 <span v-else class="text-text-muted">—</span>
               </td>
               <td>{{ formatDate(u.createdAt) }}</td>
+              <td class="text-right pr-4">
+                <button
+                  class="text-xs text-brand hover:underline"
+                  @click="editingUser = u"
+                >
+                  Edit
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -63,19 +80,23 @@ definePageMeta({ middleware: 'admin' })
 useHead({ title: 'Users' })
 
 const contractsStore = useContractsStore()
-const showCreate = ref(false)
+const showCreate  = ref(false)
+const editingUser = ref<typeof users.value[number] | null>(null)
 
 const { data, refresh } = await useFetch('/api/users')
 const users = computed(() => data.value?.users ?? [])
 
 const companies = computed(() => contractsStore.companies)
 
-function formatDate(d: Date | string) {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
+const { formatDate } = useFormatters()
 
 async function onCreated() {
   showCreate.value = false
+  await refresh()
+}
+
+async function onSaved() {
+  editingUser.value = null
   await refresh()
 }
 

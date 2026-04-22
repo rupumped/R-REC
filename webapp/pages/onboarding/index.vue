@@ -286,29 +286,34 @@
           </button>
           <span v-else />
 
-          <div class="flex gap-3">
-            <button
-              class="rounded border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-              :disabled="saving"
-              @click="saveDraft"
-            >
-              Save draft
-            </button>
-            <button
-              v-if="currentStep < steps.length - 1"
-              class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-              @click="currentStep++"
-            >
-              Continue
-            </button>
-            <button
-              v-else
-              class="rounded bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-              :disabled="saving"
-              @click="submitForm"
-            >
-              {{ saving ? 'Submitting…' : 'Submit for review' }}
-            </button>
+          <div class="flex flex-col items-end gap-2">
+            <p v-if="submitError && currentStep === steps.length - 1" role="alert" aria-live="assertive" class="text-xs text-danger text-right">
+              {{ submitError }}
+            </p>
+            <div class="flex gap-3">
+              <button
+                class="rounded border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                :disabled="saving"
+                @click="saveDraft"
+              >
+                Save draft
+              </button>
+              <button
+                v-if="currentStep < steps.length - 1"
+                class="rounded bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                @click="currentStep++"
+              >
+                Continue
+              </button>
+              <button
+                v-else
+                class="rounded bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                :disabled="saving"
+                @click="submitForm"
+              >
+                {{ saving ? 'Submitting…' : 'Submit for review' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -339,8 +344,9 @@ const showSecondary = ref(false)
 const showTertiary  = ref(false)
 
 // Lat/lon are kept as strings until submitted so we can validate precision
-const latError = ref('')
-const lonError = ref('')
+const latError    = ref('')
+const lonError    = ref('')
+const submitError = ref('')
 
 // Form state — mirrors new flat schema columns
 const form = reactive({
@@ -472,8 +478,25 @@ async function saveDraft() {
   }
 }
 
+function validateSubmit(): string {
+  if (!form.projectName?.trim())       return 'Project name is required (step 1)'
+  if (!form.projectType)               return 'Project type is required (step 1)'
+  if (!form.genGenerationType)         return 'Primary energy source is required (step 2)'
+  if (!form.capCapacity)               return 'Installed capacity is required (step 3)'
+  if (!form.locLatStr || !form.locLonStr) return 'Latitude and longitude are required (step 4)'
+  if (!form.dateDateOfFirstOperation)  return 'Date of first operation is required (step 5)'
+  if (form.photosGen.length === 0)     return 'At least one equipment photo is required (step 6)'
+  return ''
+}
+
 async function submitForm() {
   validateLatLon()
+  submitError.value = ''
+  const validationMsg = validateSubmit()
+  if (validationMsg) {
+    submitError.value = validationMsg
+    return
+  }
   if (latError.value || lonError.value) return
   saving.value = true
   try {

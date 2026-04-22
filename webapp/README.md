@@ -63,6 +63,7 @@ This applies the Drizzle schema to your Neon database without needing a migratio
 
 ```bash
 DATABASE_URL="..." \
+ADMIN_USERNAME="admin" \
 ADMIN_EMAIL="admin@yourorg.com" \
 ADMIN_PASSWORD="a-strong-password-12+" \
 npm run seed:admin
@@ -104,6 +105,27 @@ npm run db:studio   # Opens Drizzle Studio at localhost:4983
 5. The public URL is shown in the bucket settings under "Public bucket URL".
 
 Files are never routed through Vercel — the client receives a presigned PUT URL and uploads directly to R2.
+
+---
+
+## Axiom logging
+
+Server-side request and error logs are sent to [Axiom](https://axiom.co) via `@axiomhq/pino`. This is optional — if the env vars are absent, logs fall back to stdout only.
+
+| Variable | Description |
+|---|---|
+| `AXIOM_TOKEN` | Axiom API token with `ingest` permission |
+| `AXIOM_DATASET` | Axiom dataset name to write logs into |
+
+### Local development
+
+Leave `AXIOM_TOKEN` and `AXIOM_DATASET` unset — the logger will write to stdout. No Axiom account is required for local dev.
+
+### Production
+
+Add both variables in the Vercel dashboard (**Settings → Environment Variables**). Logs will appear in the configured dataset in real time.
+
+> **Note:** These variables are read directly from `process.env` at module load time and bypass Nuxt's `runtimeConfig` layer — do **not** prefix them with `NUXT_`.
 
 ---
 

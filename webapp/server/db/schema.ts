@@ -51,7 +51,7 @@ export const orders = pgTable('orders', {
   orderType:       varchar('order_type', { length: 20 }).notNull(), // 'market' | 'limit' | 'stop' | 'stop-limit'
   amount:          integer('amount').notNull(),
 
-  // Price fields — staff-visible only; never returned to non-admin clients
+  // Price fields — these are not the market price; rather, these are the stop and limit prices set by the user making the order
   limitPrice:      numeric('limit_price', { precision: 12, scale: 4 }),
   stopPrice:       numeric('stop_price', { precision: 12, scale: 4 }),
 

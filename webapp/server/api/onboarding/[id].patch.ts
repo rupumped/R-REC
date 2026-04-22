@@ -67,12 +67,19 @@ export default defineEventHandler(async (event) => {
     updates.status = 'pending'
   }
 
-  // Admin can approve or reject
+  // Admin can approve/reject (pending only) or re-open a rejected submission
   if (user.isAdmin) {
     if (body.status === 'approved' || body.status === 'rejected') {
+      if (existing.status !== 'pending') {
+        throw createError({ statusCode: 409, statusMessage: 'Can only approve or reject pending submissions' })
+      }
       updates.status     = body.status
       updates.reviewedAt = new Date()
       updates.reviewedBy = user.id
+    }
+    if (body.status === 'draft' && existing.status === 'rejected') {
+      // Re-open a rejected submission so the generator can revise and resubmit
+      updates.status = 'draft'
     }
     if (body.reviewNotes !== undefined) {
       updates.reviewNotes = body.reviewNotes

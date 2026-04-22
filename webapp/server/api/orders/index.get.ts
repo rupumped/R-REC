@@ -3,12 +3,14 @@ import { requireAuth } from '~/server/utils/auth'
 import { useDb, schema } from '~/server/db'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
-  const db = useDb()
+  const user  = await requireAuth(event)
+  const db    = useDb()
+  const query = getQuery(event)
 
-  const rows = await db
+  const q = db
     .select({
       id:              schema.orders.id,
+      userId:          schema.orders.userId,
       companyWallet:   schema.orders.companyWallet,
       contractAddress: schema.orders.contractAddress,
       contractName:    schema.orders.contractName,
@@ -22,10 +24,14 @@ export default defineEventHandler(async (event) => {
       status:          schema.orders.status,
       createdAt:       schema.orders.createdAt,
       processedAt:     schema.orders.processedAt,
+      processingNotes: schema.orders.processingNotes,
     })
     .from(schema.orders)
-    .where(eq(schema.orders.userId, user.id))
-    .orderBy(desc(schema.orders.createdAt))
+
+  // Admins can fetch all orders with ?all=true; otherwise filter to own orders
+  const rows = user.isAdmin && query.all === 'true'
+    ? await q.orderBy(desc(schema.orders.createdAt))
+    : await q.where(eq(schema.orders.userId, user.id)).orderBy(desc(schema.orders.createdAt))
 
   return { orders: rows }
 })

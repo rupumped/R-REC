@@ -9,6 +9,6 @@
 definePageMeta({ middleware: 'admin' })
 useHead({ title: 'Order Queue' })
 
-const { data, refresh } = await useFetch('/api/orders')
+const { data, refresh } = await useFetch('/api/orders', { query: { all: 'true' } })
 const orders = computed(() => data.value?.orders ?? [])
 </script>

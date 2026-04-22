@@ -24,6 +24,11 @@ export default defineEventHandler(async (event) => {
 
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Order not found' })
 
+  // Finalized orders cannot be re-transitioned
+  if (existing.status === 'executed' || existing.status === 'cancelled') {
+    throw createError({ statusCode: 409, statusMessage: 'Order is already finalized' })
+  }
+
   // Non-admin can only cancel their own orders
   if (!user.isAdmin) {
     if (existing.userId !== user.id) {

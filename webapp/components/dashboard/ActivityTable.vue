@@ -17,7 +17,7 @@
         </thead>
         <tbody>
           <tr v-if="activity.length === 0">
-            <td colspan="7" class="text-center text-text-muted py-10">No activity</td>
+            <td colspan="5" class="text-center text-text-muted py-10">No activity</td>
           </tr>
           <tr v-for="(item, i) in displayedActivity" :key="i">
             <td class="text-text-secondary whitespace-nowrap">{{ item.date }}</td>
@@ -78,11 +78,6 @@ const displayedActivity = computed(() =>
     .reverse()
     .slice(0, page.value * pageSize),
 )
-
-function abbrevAddr(addr: string): string {
-  if (!addr || addr.length < 10) return addr
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`
-}
 
 function actionClass(action: string): string {
   switch (action) {

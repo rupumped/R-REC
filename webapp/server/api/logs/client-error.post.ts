@@ -1,3 +1,6 @@
+// Intentionally unauthenticated — this endpoint receives crash reports from
+// the browser error handler, which fires for both logged-in and logged-out
+// sessions (including errors on the /login page itself). Do not add requireAuth.
 import { logger } from '~/server/utils/logger'
 
 interface ClientErrorBody {

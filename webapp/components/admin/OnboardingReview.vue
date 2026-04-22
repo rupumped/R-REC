@@ -143,6 +143,19 @@
           </div>
         </template>
 
+        <template v-else-if="sub.status === 'rejected'">
+          <div v-if="sub.reviewNotes" class="text-sm text-text-secondary border-t border-border pt-3">
+            <span class="font-medium">Review notes:</span> {{ sub.reviewNotes }}
+          </div>
+          <div class="border-t border-border pt-3">
+            <button
+              class="rounded border border-border px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              @click="reopen(sub.id)"
+            >
+              Re-open for revision
+            </button>
+          </div>
+        </template>
         <div v-else-if="sub.reviewNotes" class="text-sm text-text-secondary border-t border-border pt-3">
           <span class="font-medium">Review notes:</span> {{ sub.reviewNotes }}
         </div>
@@ -187,11 +200,10 @@ async function review(id: number, status: 'approved' | 'rejected') {
   emit('refresh')
 }
 
-function viewUrl(url: string) {
-  return `/api/uploads/view?url=${encodeURIComponent(url)}`
+async function reopen(id: number) {
+  await $fetch(`/api/onboarding/${id}`, { method: 'PATCH', body: { status: 'draft' } })
+  emit('refresh')
 }
 
-function formatDate(d: Date | string) {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
+const { formatDate, viewUrl } = useFormatters()
 </script>

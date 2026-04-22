@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   if (body.isGenerator !== undefined) updates.isGenerator = body.isGenerator
   if (body.isBuyer !== undefined) updates.isBuyer = body.isBuyer
   if (body.isAdmin !== undefined) updates.isAdmin = body.isAdmin
-  if (body.companyWallet !== undefined) updates.companyWallet = body.companyWallet.toLowerCase()
+  if (body.companyWallet !== undefined) updates.companyWallet = body.companyWallet ? body.companyWallet.toLowerCase() : null
   if (body.password) {
     if (body.password.length < 12) {
       throw createError({ statusCode: 400, statusMessage: 'Password must be at least 12 characters' })

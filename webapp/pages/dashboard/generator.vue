@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: [] })
+definePageMeta({ middleware: 'generator' })
 useHead({ title: 'Generation' })
 
 const { data, refresh } = await useFetch('/api/onboarding')
@@ -56,7 +56,5 @@ const submissions = computed(() => data.value?.submissions ?? [])
 
 onMounted(() => refresh())
 
-function formatDate(d: Date | string): string {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
+const { formatDate } = useFormatters()
 </script>

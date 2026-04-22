@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ middleware: 'buyer' })
 useHead({ title: 'Goals & Orders' })
 
 const { data, refresh } = await useFetch('/api/orders')

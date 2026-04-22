@@ -1,8 +1,10 @@
+import { eq } from 'drizzle-orm'
 import { requireAuth } from '~/server/utils/auth'
+import { useDb, schema } from '~/server/db'
 import { createPresignedView } from '~/server/utils/r2'
 
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const { url } = getQuery(event)
   if (!url || typeof url !== 'string') {
@@ -17,6 +19,35 @@ export default defineEventHandler(async (event) => {
   }
 
   const key = url.slice(publicBase.length + 1)
+
+  // Non-admins may only view documents belonging to their own submissions
+  if (!user.isAdmin) {
+    const db = useDb()
+    const submissions = await db
+      .select({
+        genDocUrl:   schema.onboardingSubmissions.genDocUrl,
+        capDocUrl:   schema.onboardingSubmissions.capDocUrl,
+        locDocUrl:   schema.onboardingSubmissions.locDocUrl,
+        dateDocUrl:  schema.onboardingSubmissions.dateDocUrl,
+        photosGen:   schema.onboardingSubmissions.photosGen,
+        photosMeter: schema.onboardingSubmissions.photosMeter,
+      })
+      .from(schema.onboardingSubmissions)
+      .where(eq(schema.onboardingSubmissions.userId, user.id))
+
+    const allowed = submissions.some(sub =>
+      sub.genDocUrl  === url ||
+      sub.capDocUrl  === url ||
+      sub.locDocUrl  === url ||
+      sub.dateDocUrl === url ||
+      sub.photosGen?.some(p => p.url === url) ||
+      sub.photosMeter?.some(p => p.url === url),
+    )
+
+    if (!allowed) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+  }
 
   const signedUrl = await createPresignedView(key)
   return sendRedirect(event, signedUrl, 307)

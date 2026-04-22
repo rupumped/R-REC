@@ -42,8 +42,7 @@ function downsampleData(
   const outValues: number[] = []
 
   for (let i = 0; i < maxPoints; i++) {
-    const start = Math.floor(i * bucketSize)
-    const end   = Math.min(Math.floor((i + 1) * bucketSize), dates.length)
+    const end = Math.min(Math.floor((i + 1) * bucketSize), dates.length)
     // Take the last point in each bucket (most recent cumulative value)
     outDates.push(dates[end - 1])
     outValues.push(values[end - 1])
@@ -150,85 +149,87 @@ export const useGenerationStore = defineStore('generation', () => {
     const contractsStore = useContractsStore()
     await contractsStore.loadPublicData()
 
-    loading.value = true
-    error.value   = null
+    loading.value  = true
+    error.value    = null
     progress.value = 0
 
-    // Collect all verification_data URLs for mint transactions to this wallet
-    const mintUrls: string[] = []
-    for (const contract of contractsStore.contractsRaw) {
-      for (const trans of contract.transactions ?? []) {
-        if (
-          !trans.ignore &&
-          trans.action === 'mint' &&
-          trans.to.toLowerCase() === walletAddr.toLowerCase() &&
-          trans.verification_data
-        ) {
-          mintUrls.push(trans.verification_data)
+    try {
+      // Collect all verification_data URLs for mint transactions to this wallet
+      const mintUrls: string[] = []
+      for (const contract of contractsStore.contractsRaw) {
+        for (const trans of contract.transactions ?? []) {
+          if (
+            !trans.ignore &&
+            trans.action === 'mint' &&
+            trans.to.toLowerCase() === walletAddr.toLowerCase() &&
+            trans.verification_data
+          ) {
+            mintUrls.push(trans.verification_data)
+          }
         }
       }
-    }
 
-    if (mintUrls.length === 0) {
-      loaded.value  = true
-      loading.value = false
-      return
-    }
+      if (mintUrls.length === 0) {
+        loaded.value = true
+        return
+      }
 
-    // Fetch all CSVs in parallel (with individual error tolerance)
-    const results = await Promise.allSettled(
-      mintUrls.map(url => fetch(url).then(r => r.text())),
-    )
+      // Fetch all CSVs in parallel (with individual error tolerance)
+      const results = await Promise.allSettled(
+        mintUrls.map(url => fetch(url).then(r => r.text())),
+      )
 
-    const siteMap = new Map<string, SiteInfo>()
+      const siteMap = new Map<string, SiteInfo>()
 
-    // Collect all points into plain local arrays (avoids O(n²) reactive splices)
-    const allPoints: Array<{ t: number; kWh: number }> = []
+      // Collect all points into plain local arrays (avoids O(n²) reactive splices)
+      const allPoints: Array<{ t: number; kWh: number }> = []
 
-    let completed = 0
-    for (const result of results) {
-      completed++
-      progress.value = Math.round((completed / mintUrls.length) * 100)
+      let completed = 0
+      for (const result of results) {
+        completed++
+        progress.value = Math.round((completed / mintUrls.length) * 100)
 
-      if (result.status !== 'fulfilled') continue
+        if (result.status !== 'fulfilled') continue
 
-      const siteInfo = parseSiteInfo(result.value)
-      if (siteInfo) {
-        const existing = siteMap.get(siteInfo.name)
-        if (existing) {
-          existing.totalEnergyMwh += siteInfo.totalEnergyMwh
+        const siteInfo = parseSiteInfo(result.value)
+        if (siteInfo) {
+          const existing = siteMap.get(siteInfo.name)
+          if (existing) {
+            existing.totalEnergyMwh += siteInfo.totalEnergyMwh
+          } else {
+            siteMap.set(siteInfo.name, { ...siteInfo })
+          }
+        }
+
+        const points = parseVerificationCsv(result.value)
+        for (const { date, kWh } of points) {
+          allPoints.push({ t: date.getTime(), kWh })
+        }
+      }
+
+      // Sort by timestamp, then merge duplicate timestamps
+      allPoints.sort((a, b) => a.t - b.t)
+
+      const mergedDates: Date[]   = []
+      const mergedKwh:   number[] = []
+      for (const { t, kWh } of allPoints) {
+        if (mergedDates.length > 0 && mergedDates[mergedDates.length - 1]!.getTime() === t) {
+          mergedKwh[mergedKwh.length - 1]! += kWh
         } else {
-          siteMap.set(siteInfo.name, { ...siteInfo })
+          mergedDates.push(new Date(t))
+          mergedKwh.push(kWh)
         }
       }
 
-      const points = parseVerificationCsv(result.value)
-      for (const { date, kWh } of points) {
-        allPoints.push({ t: date.getTime(), kWh })
-      }
+      // Single reactive assignment — no incremental splice churn
+      rawDates.value     = mergedDates
+      rawKwh.value       = mergedKwh
+      sites.value        = Array.from(siteMap.values())
+      loadedWallet.value = walletAddr.toLowerCase()
+      loaded.value       = true
+    } finally {
+      loading.value = false
     }
-
-    // Sort by timestamp, then merge duplicate timestamps
-    allPoints.sort((a, b) => a.t - b.t)
-
-    const mergedDates: Date[]   = []
-    const mergedKwh:   number[] = []
-    for (const { t, kWh } of allPoints) {
-      if (mergedDates.length > 0 && mergedDates[mergedDates.length - 1]!.getTime() === t) {
-        mergedKwh[mergedKwh.length - 1]! += kWh
-      } else {
-        mergedDates.push(new Date(t))
-        mergedKwh.push(kWh)
-      }
-    }
-
-    // Single reactive assignment — no incremental splice churn
-    rawDates.value    = mergedDates
-    rawKwh.value      = mergedKwh
-    sites.value       = Array.from(siteMap.values())
-    loadedWallet.value = walletAddr.toLowerCase()
-    loaded.value      = true
-    loading.value     = false
   }
 
   function reset() {
