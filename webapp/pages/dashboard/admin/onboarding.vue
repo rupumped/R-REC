@@ -9,6 +9,15 @@
 definePageMeta({ middleware: 'admin' })
 useHead({ title: 'Onboarding Queue' })
 
-const { data, refresh } = await useFetch('/api/onboarding')
+const { data, refresh } = await useFetch('/api/onboarding?all=true', {
+  transform: (res) => ({
+    submissions: res.submissions.map(s => ({
+      ...s,
+      createdAt:  new Date(s.createdAt),
+      updatedAt:  new Date(s.updatedAt),
+      reviewedAt: s.reviewedAt ? new Date(s.reviewedAt) : null,
+    })),
+  }),
+})
 const submissions = computed(() => data.value?.submissions ?? [])
 </script>

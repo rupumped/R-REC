@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { requireAdmin } from '~/server/utils/auth'
+import { logger } from '~/server/utils/logger'
 import { useDb, schema } from '~/server/db'
 
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event)
+  const admin = await requireAdmin(event)
 
   const id = parseInt(getRouterParam(event, 'id') ?? '')
   if (isNaN(id)) throw createError({ statusCode: 400, statusMessage: 'Invalid id' })
@@ -48,5 +49,13 @@ export default defineEventHandler(async (event) => {
     })
 
   if (!user) throw createError({ statusCode: 404, statusMessage: 'User not found' })
+
+  logger.info({
+    adminId:        admin.id,
+    targetUserId:   id,
+    targetUsername: user.username,
+    changes:        Object.keys(updates).filter(k => k !== 'passwordHash'),
+  }, 'User updated by admin')
+
   return { user }
 })

@@ -6,8 +6,10 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const db = useDb()
 
-  // Admin sees all; generator sees their own
-  const rows = user.isAdmin
+  const { all } = getQuery(event)
+  const showAll = user.isAdmin && all === 'true'
+
+  const rows = showAll
     ? await db
         .select()
         .from(schema.onboardingSubmissions)

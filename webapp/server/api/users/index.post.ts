@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { requireAdmin } from '~/server/utils/auth'
+import { logger } from '~/server/utils/logger'
 import { useDb, schema } from '~/server/db'
 
 interface CreateUserBody {
@@ -56,10 +57,18 @@ export default defineEventHandler(async (event) => {
   } catch (e: unknown) {
     // Postgres unique-constraint violation
     if ((e as { code?: string })?.code === '23505') {
+      logger.warn({ adminId: admin.id, username: body.username.trim().toLowerCase() }, 'User creation failed: username taken')
       throw createError({ statusCode: 409, statusMessage: 'Username already taken — choose a different one' })
     }
     throw e
   }
+
+  logger.info({
+    adminId:     admin.id,
+    newUserId:   user!.id,
+    newUsername: user!.username,
+    roles:       { isGenerator: user!.isGenerator, isBuyer: user!.isBuyer, isAdmin: user!.isAdmin },
+  }, 'User created')
 
   return { user }
 })

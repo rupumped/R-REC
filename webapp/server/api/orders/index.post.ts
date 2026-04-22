@@ -1,4 +1,5 @@
 import { requireBuyer } from '~/server/utils/auth'
+import { logger } from '~/server/utils/logger'
 import { useDb, schema } from '~/server/db'
 
 interface CreateOrderBody {
@@ -55,6 +56,18 @@ export default defineEventHandler(async (event) => {
       status:          'pending',
     })
     .returning()
+
+  logger.info({
+    orderId:      order.id,
+    userId:       user.id,
+    username:     user.username,
+    side:         order.side,
+    orderType:    order.orderType,
+    amount:       order.amount,
+    abbreviation: order.abbreviation ?? null,
+    limitPrice:   order.limitPrice ?? null,
+    stopPrice:    order.stopPrice ?? null,
+  }, 'Order placed')
 
   return { order }
 })

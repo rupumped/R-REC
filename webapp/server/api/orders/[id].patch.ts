@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { requireAuth } from '~/server/utils/auth'
+import { logger } from '~/server/utils/logger'
 import { useDb, schema } from '~/server/db'
 
 export default defineEventHandler(async (event) => {
@@ -52,6 +53,16 @@ export default defineEventHandler(async (event) => {
     .set(updates)
     .where(eq(schema.orders.id, id))
     .returning()
+
+  if (body.status) {
+    logger.info({
+      orderId:        id,
+      actorId:        user.id,
+      actorUsername:  user.username,
+      previousStatus: existing.status,
+      newStatus:      body.status,
+    }, `Order ${id} status changed: ${existing.status} → ${body.status} by ${user.username}`)
+  }
 
   return { order }
 })
